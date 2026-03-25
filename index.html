@@ -57,6 +57,7 @@
     top: 0; left: 0;
     width: 100%; height: 100%;
     z-index: 0;
+    transition: opacity 0.3s ease;
   }
 
   /* Left-side gradient scrim: protects text from 3D mesh overlap */
@@ -970,9 +971,8 @@ revealElements.forEach(el => observer.observe(el));
     mesh.scale.setScalar(1.0 + breath);
 
     // Fade as user scrolls past hero
-    const fade = 1.0 - scrollY * 1.8;
-    mesh.material.opacity = Math.max(0, fade);
-    mesh.visible = fade > 0.01;
+    // Gentle fade via canvas opacity - smooth, never abrupt
+    canvas.style.opacity = Math.max(0.06, 1.0 - scrollY * 0.8);
 
     renderer.render(scene, camera);
   }
