@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Christian Martin — AI Engineer</title>
+<meta name="description" content="AI Engineer and Full-Stack Developer. Two multi-agent LLM platforms in production. 2,600+ commits.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #050505;
+    --surface: #0c0c0c;
+    --border: #1a1a1a;
+    --text: #e8e6e3;
+    --text-dim: #888;
+    --text-muted: #444;
+    --accent: #c8a87c;
+    --accent-dim: rgba(200, 168, 124, 0.15);
+    --green: #4ade80;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'DM Sans', system-ui, sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Grain overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px;
+  }
+
+  /* Shader canvas */
+  #shader-bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+
+  /* Left-side gradient scrim: protects text from 3D mesh overlap */
+  .hero::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 65%;
+    height: 100vh;
+    background: linear-gradient(
+      to right,
+      rgba(5,5,5,0.92) 0%,
+      rgba(5,5,5,0.75) 50%,
+      rgba(5,5,5,0.0) 100%
+    );
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Page content above canvas */
+  .page { position: relative; z-index: 1; }
+
+  /* ---- NAV ---- */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 24px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    backdrop-filter: blur(12px);
+    background: rgba(5,5,5,0.6);
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  nav .logo { color: var(--text); font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; }
+  nav .links { display: flex; gap: 32px; }
+  nav a { color: var(--text-dim); text-decoration: none; transition: color 0.3s; }
+  nav a:hover { color: var(--accent); }
+
+  /* ---- HERO ---- */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 120px 40px 80px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .hero-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 24px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeUp 0.8s ease 0.3s forwards;
+    text-shadow: 0 1px 8px rgba(5,5,5,0.9);
+  }
+
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(52px, 8vw, 96px);
+    font-weight: 400;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 32px;
+    opacity: 0;
+    transform: translateY(30px);
+    animation: fadeUp 0.9s ease 0.5s forwards;
+    text-shadow: 0 2px 20px rgba(5,5,5,0.8);
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 300;
+    color: #a8a5a0;
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 48px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeUp 0.8s ease 0.7s forwards;
+    text-shadow: 0 1px 12px rgba(5,5,5,0.9), 0 0 40px rgba(5,5,5,0.6);
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 48px;
+    flex-wrap: wrap;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeUp 0.8s ease 0.9s forwards;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    text-shadow: 0 1px 12px rgba(5,5,5,0.9);
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #777;
+    margin-top: 4px;
+    text-shadow: 0 1px 10px rgba(5,5,5,1), 0 0 30px rgba(5,5,5,0.8);
+  }
+
+  .live-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 2s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ---- SECTIONS ---- */
+  section {
+    padding: 120px 40px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #777;
+    margin-bottom: 16px;
+    text-shadow: 0 1px 10px rgba(5,5,5,1), 0 0 30px rgba(5,5,5,0.8);
+  }
+
+  .section-title {
+    font-family: var(--serif);
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 400;
+    line-height: 1.15;
+    margin-bottom: 48px;
+  }
+
+  /* ---- THE ARC (Timeline) ---- */
+  .arc-grid {
+    display: grid;
+    gap: 0;
+    
+  }
+
+  .arc-item {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 32px;
+    padding: 32px 0;
+    
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .arc-item.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .arc-year {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    padding-top: 2px;
+  }
+
+  .arc-text {
+    font-size: 15px;
+    font-weight: 300;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  .arc-text strong {
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  /* ---- PRODUCTS ---- */
+  .products-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .product-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 40px;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .product-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .product-card:hover {
+    border-color: rgba(200, 168, 124, 0.2);
+  }
+
+  .product-status {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 16px;
+  }
+
+  .product-name {
+    font-family: var(--serif);
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  .product-name a {
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+  .product-name a:hover { color: var(--accent); }
+
+  .product-type {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .product-desc {
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 24px;
+  }
+
+  .product-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* ---- APPROACH ---- */
+  .approach-grid {
+    display: grid;
+    gap: 0;
+    
+  }
+
+  .approach-item {
+    padding: 32px 0;
+    
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .approach-item.visible { opacity: 1; transform: translateY(0); }
+
+  .approach-item p {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-style: italic;
+    line-height: 1.5;
+    color: var(--text-dim);
+  }
+
+  /* ---- CONTACT ---- */
+  .contact-section {
+    padding: 160px 40px;
+    text-align: center;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .contact-section h2 {
+    font-family: var(--serif);
+    font-size: clamp(40px, 6vw, 64px);
+    font-weight: 400;
+    margin-bottom: 16px;
+  }
+
+  .contact-sub {
+    font-size: 15px;
+    color: var(--text-dim);
+    font-weight: 300;
+    margin-bottom: 40px;
+  }
+
+  .contact-email {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--accent);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    padding: 12px 24px;
+    border: 1px solid rgba(200, 168, 124, 0.3);
+    border-radius: 4px;
+    display: inline-block;
+    transition: all 0.3s;
+  }
+
+  .contact-email:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+  }
+
+  .contact-links {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-top: 40px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .contact-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+
+  .contact-links a:hover { color: var(--text); }
+
+  /* ---- FOOTER ---- */
+  footer {
+    padding: 40px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    
+  }
+
+  /* ---- DIVIDER ---- */
+
+
+  /* ---- ANIMATIONS ---- */
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 768px) {
+    nav { padding: 16px 20px; }
+    nav .links { gap: 16px; }
+    .hero { padding: 100px 20px 60px; }
+    section { padding: 80px 20px; }
+    .hero-stats { gap: 32px; }
+    .products-grid { grid-template-columns: 1fr; }
+    .arc-item { grid-template-columns: 80px 1fr; gap: 16px; }
+    .contact-section { padding: 100px 20px; }
+    .contact-links { flex-wrap: wrap; gap: 20px; }
+  }
+
+  @media (max-width: 480px) {
+    .hero h1 { font-size: 40px; }
+    .stat-num { font-size: 22px; }
+    .product-card { padding: 24px; }
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<canvas id="shader-bg"></canvas>
+
+<div class="page">
+
+  <!-- NAV -->
+  <nav>
+    <div class="logo">Christian Martin</div>
+    <div class="links">
+      <a href="#arc">Arc</a>
+      <a href="#work">Work</a>
+      <a href="#approach">Approach</a>
+      <a href="#contact">Contact</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-label">AI Engineer &middot; Full-Stack Developer</div>
+    <h1>I build AI systems<br>that <em>ship.</em></h1>
+    <p class="hero-sub">
+      Two multi-agent LLM platforms in production right now.
+      Real users, real billing, real infrastructure.
+      Looking for the team worth joining.
+    </p>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-num">2,600+</span>
+        <span class="stat-label">Commits</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num"><span class="live-dot"></span>2</span>
+        <span class="stat-label">Apps in Production</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">34</span>
+        <span class="stat-label">Edge Functions</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">6,000+</span>
+        <span class="stat-label">RLHF Evaluations</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- THE ARC -->
+  <section id="arc">
+    <div class="section-label">01 / The Arc</div>
+    <h2 class="section-title">Four years from evaluation<br>to production.</h2>
+
+    <div class="arc-grid">
+      <div class="arc-item" data-reveal>
+        <div class="arc-year">2021-23</div>
+        <div class="arc-text">
+          <strong>Started evaluating LLM outputs at scale.</strong>
+          6,000+ RLHF evaluations across Claude, GPT, and Gemini model families.
+          Systematic red teaming for hallucinations, bias vectors, jailbreak vulnerabilities.
+          2,000 hours of hands-on interaction. Built the intuition that informs everything I ship now.
+        </div>
+      </div>
+      <div class="arc-item" data-reveal>
+        <div class="arc-year">2024</div>
+        <div class="arc-text">
+          <strong>Multimodal production at scale.</strong>
+          5,000+ images in Midjourney. 984 AI-generated songs distributed across major platforms.
+          Seasonal art packages at 8K resolution for Samsung Frame TV.
+          Learned what compounds and what breaks when you push generative systems past demo stage.
+        </div>
+      </div>
+      <div class="arc-item" data-reveal>
+        <div class="arc-year">2025</div>
+        <div class="arc-text">
+          <strong>Started shipping production software.</strong>
+          Two SaaS platforms from zero. 47 development phases. A billing system rewritten three times
+          before idempotency clicked. Pixel-level output validation. Multi-agent architectures
+          with budget-constrained model routing.
+        </div>
+      </div>
+      <div class="arc-item" data-reveal>
+        <div class="arc-year">2026</div>
+        <div class="arc-text">
+          <strong>Both apps live. Open to what's next.</strong>
+          2,600+ commits across both platforms. The contribution graph tells
+          the story better than any summary. Remote, Chicago area, or hybrid.
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- WORK -->
+  <section id="work">
+    <div class="section-label">02 / What I Ship</div>
+    <h2 class="section-title">Production, not prototypes.</h2>
+
+    <div class="products-grid">
+      <div class="product-card" data-reveal>
+        <div class="product-status"><span class="live-dot"></span>In Production</div>
+        <div class="product-name"><a href="https://coloringstudio.ai" target="_blank">ColoringStudio.ai</a></div>
+        <div class="product-type">AI Coloring Page Generator</div>
+        <p class="product-desc">
+          5-path Gemini generation pipeline routing to distinct models.
+          Pixel-level output validation checks monochrome ratio, colorfulness, border continuity,
+          and safe margins before billing. MCP server exposing 5 AI tools via JSON-RPC 2.0.
+          Versioned prompt architecture (v7.1.0) across 21 style families.
+        </p>
+        <div class="product-tags">
+          <span class="tag">React</span>
+          <span class="tag">TypeScript</span>
+          <span class="tag">Supabase</span>
+          <span class="tag">Gemini API</span>
+          <span class="tag">Stripe</span>
+          <span class="tag">34 Edge Functions</span>
+          <span class="tag">MCP</span>
+        </div>
+      </div>
+
+      <div class="product-card" data-reveal>
+        <div class="product-status"><span class="live-dot"></span>In Production</div>
+        <div class="product-name"><a href="https://stackproof.app" target="_blank">StackProof.app</a></div>
+        <div class="product-type">Career Intelligence Platform</div>
+        <p class="product-desc">
+          3-pass scanner: manifest-only triage via Gemini Flash ($0.01/scan), dual-agent deep scan
+          with chunked batching at 30K-token threshold, tribunal reconciliation merging findings
+          across agents. Budget-constrained model routing with $2.00 per-scan ceiling and 5-minute
+          timeout enforcement.
+        </p>
+        <div class="product-tags">
+          <span class="tag">Next.js 14</span>
+          <span class="tag">PostgreSQL</span>
+          <span class="tag">Prisma</span>
+          <span class="tag">Claude API</span>
+          <span class="tag">Gemini API</span>
+          <span class="tag">Multi-Agent</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- APPROACH -->
+  <section id="approach">
+    <div class="section-label">03 / How I Work</div>
+    <h2 class="section-title">Principles over process.</h2>
+
+    <div class="approach-grid">
+      <div class="approach-item" data-reveal>
+        <p>I treat context windows like a kitchen. You don't cook in last night's dirty dishes. Clean session, atomic scope, structured handoff.</p>
+      </div>
+      <div class="approach-item" data-reveal>
+        <p>Ship first. Refactor when it earns the right. I rewrote billing three times because production taught me what planning couldn't.</p>
+      </div>
+      <div class="approach-item" data-reveal>
+        <p>Every AI output gets validated before it touches a user. Line-art guardrails, monochrome ratio checks, budget ceilings. Trust the model, verify the output.</p>
+      </div>
+      <div class="approach-item" data-reveal>
+        <p>The contribution graph doesn't care about your background. It only counts the days you opened your editor.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- CONTACT -->
+  <div class="contact-section" id="contact">
+    <div class="section-label">04 / Get in Touch</div>
+    <h2>Let's talk.</h2>
+    <p class="contact-sub">
+      Open to AI Engineering and Full-Stack roles.<br>
+      Remote, Chicago area, or hybrid.
+    </p>
+    <a href="mailto:hello@christianmartin.dev" class="contact-email">hello@christianmartin.dev</a>
+    <div class="contact-links">
+      <a href="https://github.com/mungdungus" target="_blank">GitHub</a>
+      <a href="https://coloringstudio.ai" target="_blank">ColoringStudio.ai</a>
+      <a href="https://stackproof.app" target="_blank">StackProof.app</a>
+      <a href="https://linkedin.com/in/christianmartinai" target="_blank">LinkedIn</a>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2026 Christian Martin &middot; Oak Park, IL
+  </footer>
+
+</div>
+
+<script>
+// ---- SCROLL REVEAL ----
+const revealElements = document.querySelectorAll('[data-reveal]');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => {
+        entry.target.classList.add('visible');
+      }, i * 80);
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.15 });
+revealElements.forEach(el => observer.observe(el));
+
+// ---- THREE.JS ICOSAHEDRON ----
+(function() {
+  const canvas = document.getElementById('shader-bg');
+  if (!canvas || typeof THREE === 'undefined') return;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x050505);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(1.2, 0.3, 4.5);
+
+  // Icosahedron geometry with high subdivision for smooth displacement
+  const geo = new THREE.IcosahedronGeometry(1.6, 5);
+
+  const vertexShader = `
+    varying vec2 vUv;
+    varying vec3 vWorldPos;
+    varying vec3 vNormal;
+    varying float vDisp;
+
+    uniform float uTime;
+    uniform float uScroll;
+
+    // Simplex 3D noise
+    vec3 mod289(vec3 x){ return x - floor(x*(1.0/289.0))*289.0; }
+    vec4 mod289(vec4 x){ return x - floor(x*(1.0/289.0))*289.0; }
+    vec4 permute(vec4 x){ return mod289(((x*34.0)+1.0)*x); }
+    vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314*r; }
+
+    float snoise(vec3 v){
+      const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+      const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+      vec3 i = floor(v + dot(v, C.yyy));
+      vec3 x0 = v - i + dot(i, C.xxx);
+      vec3 g = step(x0.yzx, x0.xyz);
+      vec3 l = 1.0 - g;
+      vec3 i1 = min(g, l.zxy);
+      vec3 i2 = max(g, l.zxy);
+      vec3 x1 = x0 - i1 + C.xxx;
+      vec3 x2 = x0 - i2 + C.yyy;
+      vec3 x3 = x0 - D.yyy;
+      i = mod289(i);
+      vec4 p = permute(permute(permute(
+        i.z + vec4(0.0, i1.z, i2.z, 1.0))
+        + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+        + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+      float n_ = 0.142857142857;
+      vec3 ns = n_ * D.wyz - D.xzx;
+      vec4 j = p - 49.0*floor(p*ns.z*ns.z);
+      vec4 x_ = floor(j*ns.z);
+      vec4 y_ = floor(j - 7.0*x_);
+      vec4 x = x_*ns.x + ns.yyyy;
+      vec4 y = y_*ns.x + ns.yyyy;
+      vec4 h = 1.0 - abs(x) - abs(y);
+      vec4 b0 = vec4(x.xy, y.xy);
+      vec4 b1 = vec4(x.zw, y.zw);
+      vec4 s0 = floor(b0)*2.0 + 1.0;
+      vec4 s1 = floor(b1)*2.0 + 1.0;
+      vec4 sh = -step(h, vec4(0.0));
+      vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+      vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+      vec3 p0 = vec3(a0.xy,h.x);
+      vec3 p1 = vec3(a0.zw,h.y);
+      vec3 p2 = vec3(a1.xy,h.z);
+      vec3 p3 = vec3(a1.zw,h.w);
+      vec4 norm = taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+      p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+      vec4 m = max(0.6 - vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)), 0.0);
+      m = m*m;
+      return 42.0*dot(m*m, vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+    }
+
+    float fbm(vec3 p){
+      float v = 0.0, a = 0.5;
+      for(int i=0; i<4; i++){
+        v += a * snoise(p);
+        p *= 2.0;
+        a *= 0.5;
+      }
+      return v;
+    }
+
+    void main(){
+      vUv = uv;
+      vec3 pos = position;
+      float t = uTime * 0.2;
+
+      // Organic displacement
+      vec3 np = pos * 1.2;
+      float warp = fbm(np + vec3(t, -t*0.7, t*0.4));
+      float ridge = max(0.0, 1.0 - abs(snoise(np*1.8 + t*0.3)));
+      float disp = warp * 0.22 + ridge * 0.08;
+      vDisp = disp;
+      pos += normal * disp;
+
+      vec4 world = modelMatrix * vec4(pos, 1.0);
+      vWorldPos = world.xyz;
+      vNormal = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * viewMatrix * world;
+    }
+  `;
+
+  const fragmentShader = `
+    precision highp float;
+
+    varying vec2 vUv;
+    varying vec3 vWorldPos;
+    varying vec3 vNormal;
+    varying float vDisp;
+
+    uniform float uTime;
+    uniform float uScroll;
+
+    float sat(float x){ return clamp(x, 0.0, 1.0); }
+
+    vec3 cosPalette(float t, vec3 a, vec3 b, vec3 c, vec3 d){
+      return a + b*cos(6.28318*(c*t + d));
+    }
+
+    // Recompute normal from screen-space derivatives for displaced surface
+    vec3 faceNormal(vec3 p){
+      return normalize(cross(dFdx(p), dFdy(p)));
+    }
+
+    // GGX specular
+    float ggx(float NdotH, float r){
+      float a = r*r;
+      float a2 = a*a;
+      float d = (NdotH*NdotH)*(a2-1.0)+1.0;
+      return a2/(3.14159*d*d);
+    }
+
+    vec3 fresnel(float cosT, vec3 F0){
+      return F0 + (1.0-F0)*pow(1.0-cosT, 5.0);
+    }
+
+    void main(){
+      vec3 N = faceNormal(vWorldPos);
+      vec3 V = normalize(cameraPosition - vWorldPos);
+      float t = uTime * 0.5;
+
+      // Animated cosine palette - warm amber/copper with cool accents
+      float gp = vUv.x*0.6 + vUv.y*0.4 + vDisp*0.8 + sin(t*0.15)*0.1;
+
+      vec3 albedo = cosPalette(gp,
+        vec3(0.45, 0.35, 0.25),   // bias: warm brown
+        vec3(0.35, 0.25, 0.20),   // amplitude
+        vec3(0.85, 0.65, 0.50),   // frequency
+        vec3(0.05, 0.25, 0.45)    // phase: shifts toward cool on edges
+      );
+
+      // Darken base, keep it moody
+      albedo *= 0.7;
+
+      float metallic = 0.35;
+      float rough = 0.2 + 0.15*sin(gp*6.28 + t*0.3);
+      vec3 F0 = mix(vec3(0.04), albedo, metallic);
+
+      // Three lights: key (warm), fill (cool), rim (accent)
+      vec3 L1 = normalize(vec3(5.0*sin(t*0.4), 3.0, 5.0*cos(t*0.4)) - vWorldPos);
+      vec3 L2 = normalize(vec3(-4.0, -2.0, 4.0) - vWorldPos);
+      vec3 L3 = normalize(vec3(0.0, 5.0*sin(t*0.2), -5.0) - vWorldPos);
+
+      vec3 H1 = normalize(V+L1);
+      vec3 H2 = normalize(V+L2);
+
+      float NdV = sat(dot(N,V));
+      float NdL1 = sat(dot(N,L1));
+      float NdL2 = sat(dot(N,L2));
+      float NdL3 = sat(dot(N,L3));
+
+      // Specular (key light)
+      float D1 = ggx(sat(dot(N,H1)), rough);
+      vec3 F1 = fresnel(sat(dot(V,H1)), F0);
+      vec3 spec1 = D1 * F1 * 0.25;
+
+      // Specular (fill)
+      float D2 = ggx(sat(dot(N,H2)), rough);
+      vec3 F2 = fresnel(sat(dot(V,H2)), F0);
+      vec3 spec2 = D2 * F2 * 0.15;
+
+      vec3 diff = albedo * (1.0-metallic) / 3.14159;
+
+      // Light colors
+      vec3 keyCol = vec3(1.0, 0.92, 0.82);     // warm white
+      vec3 fillCol = vec3(0.55, 0.62, 0.78);    // cool steel
+      vec3 rimCol = vec3(0.80, 0.67, 0.50);     // amber
+
+      vec3 color = vec3(0.0);
+      color += (diff + spec1) * keyCol * NdL1 * 1.0;
+      color += (diff + spec2) * fillCol * NdL2 * 0.45;
+      color += diff * rimCol * NdL3 * 0.3;
+
+      // Fresnel rim glow
+      float rim = pow(1.0 - NdV, 3.0);
+      color += vec3(0.75, 0.55, 0.35) * rim * 0.35;
+
+      // Displacement glow
+      color += vec3(0.6, 0.45, 0.25) * abs(vDisp) * 0.3;
+
+      // Fake environment reflection
+      vec3 R = reflect(-V, N);
+      float envH = R.y * 0.5 + 0.5;
+      vec3 env = mix(vec3(0.01, 0.01, 0.015), vec3(0.06, 0.08, 0.12), envH);
+      vec3 Fenv = fresnel(NdV, F0);
+      color += Fenv * env * (1.0 - rough) * 0.5;
+
+      // ACES tonemap
+      float a=2.51, b=0.03, c=2.43, d=0.59, e=0.14;
+      color = clamp((color*(a*color+b))/(color*(c*color+d)+e), 0.0, 1.0);
+
+      // Gamma
+      color = pow(color, vec3(1.0/2.2));
+
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `;
+
+  const mat = new THREE.ShaderMaterial({
+    vertexShader,
+    fragmentShader,
+    uniforms: {
+      uTime: { value: 0 },
+      uScroll: { value: 0 }
+    },
+    side: THREE.DoubleSide
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(2.0, 0, 0); // offset right of hero text
+  scene.add(mesh);
+
+  // State
+  let scrollY = 0;
+  let scrollVel = 0;
+  let lastScrollY = 0;
+  let mouseX = 0.5, mouseY = 0.5;
+  let smoothMX = 0.5, smoothMY = 0.5;
+
+  window.addEventListener('scroll', () => {
+    const maxScroll = document.body.scrollHeight - window.innerHeight;
+    scrollY = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+    scrollVel = (window.scrollY - lastScrollY) * 0.005;
+    lastScrollY = window.scrollY;
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX / window.innerWidth;
+    mouseY = e.clientY / window.innerHeight;
+  });
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+
+    mat.uniforms.uTime.value = t;
+    mat.uniforms.uScroll.value = scrollY;
+
+    // Scroll-driven rotation (slow, cinematic)
+    mesh.rotation.x = scrollY * Math.PI * 1.5 + Math.sin(t * 0.15) * 0.05;
+    mesh.rotation.y = scrollY * Math.PI * 2.0 + t * 0.08;
+
+    // Scroll velocity twist (inertia feel)
+    scrollVel *= 0.92;
+    mesh.rotation.z = scrollVel * 0.5;
+
+    // Mouse parallax (smooth)
+    smoothMX += (mouseX - smoothMX) * 0.04;
+    smoothMY += (mouseY - smoothMY) * 0.04;
+    mesh.position.x = 2.0 + (smoothMX - 0.5) * 0.4;
+    mesh.position.y = 0.0 + (0.5 - smoothMY) * 0.3;
+
+    // Gentle breathing
+    const breath = Math.sin(t * 0.4) * 0.015;
+    mesh.scale.setScalar(1.0 + breath);
+
+    // Fade as user scrolls past hero
+    const fade = 1.0 - scrollY * 1.8;
+    mesh.material.opacity = Math.max(0, fade);
+    mesh.visible = fade > 0.01;
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+})();
+</script>
+
+</body>
+</html>
